@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitcoin Tracker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: #0b0e14;
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 380px;
+      backdrop-filter: blur(12px);
+    }
+
+    .asset-label {
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #8a939e;
+      margin-bottom: 6px;
+    }
+
+    .current-price {
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 24px;
+    }
+
+    .holdings-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      text-align: left;
+    }
+
+    .holdings-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #8a939e;
+      margin-bottom: 6px;
+    }
+
+    .holdings-values {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .btc-amount-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .btc-amount {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .buy-price-subtext {
+      font-size: 11px;
+      color: #8a939e;
+      margin-top: 3px;
+    }
+
+    .pv-badge {
+      font-size: 15px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .total-container {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 16px;
+      text-align: left;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #8a939e;
+      margin-bottom: 3px;
+    }
+
+    .stat-val {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .positive { color: #00d084; }
+    .negative { color: #ff4d4d; }
+
+    .updated-at {
+      margin-top: 20px;
+      font-size: 11px;
+      color: #4a5260;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="asset-label">Bitcoin / EUR</div>
+    <div id="current-price" class="current-price">Chargement...</div>
+
+    <div class="holdings-box">
+      <div class="holdings-header">
+        <span>Solde détenu</span>
+        <span>Plus-value</span>
+      </div>
+      <div class="holdings-values">
+        <div class="btc-amount-block">
+          <span id="btc-amount" class="btc-amount">0,02211859 BTC</span>
+          <span id="buy-price" class="buy-price-subtext">Acheté à -- €</span>
+        </div>
+        <span id="pv-display" class="pv-badge">--</span>
+      </div>
+    </div>
+
+    <div class="total-container">
+      <div class="stat-label">Valeur totale du portefeuille</div>
+      <div id="total-val" class="stat-val">--</div>
+    </div>
+
+    <div id="update-time" class="updated-at">Mise à jour en attente...</div>
+  </div>
+
+  <script>
+    // ==========================================
+    // TES PARAMÈTRES
+    // ==========================================
+    const QUANTITE_BTC = 0.02211859;
+    const TOTAL_INVESTI_EUR = 1445.60; // Montant total déposé/investi en €
+    // ==========================================
+
+    // Calcul et affichage du prix d'achat unitaire moyen
+    const prixAchatMoyen = Math.round(TOTAL_INVESTI_EUR / QUANTITE_BTC);
+    document.getElementById('btc-amount').textContent = QUANTITE_BTC.toString().replace('.', ',') + ' BTC';
+    document.getElementById('buy-price').textContent = `Acheté à ${prixAchatMoyen.toLocaleString('fr-FR')} €`;
+
+    async function updateTracker() {
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur');
+        const data = await response.json();
+        const currentPrice = data.bitcoin.eur;
+
+        // Calculs
+        const valeurTotale = currentPrice * QUANTITE_BTC;
+        const plusValue = valeurTotale - TOTAL_INVESTI_EUR;
+        const pourcentage = ((valeurTotale - TOTAL_INVESTI_EUR) / TOTAL_INVESTI_EUR) * 100;
+
+        // Affichage cours & valeur totale
+        document.getElementById('current-price').textContent = Math.round(currentPrice).toLocaleString('fr-FR') + ' €';
+        document.getElementById('total-val').textContent = valeurTotale.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+        // Affichage de la PV
+        const pvElement = document.getElementById('pv-display');
+        const sign = plusValue >= 0 ? '+' : '';
+        const colorClass = plusValue >= 0 ? 'positive' : 'negative';
+
+        pvElement.textContent = `${sign}${plusValue.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € (${sign}${pourcentage.toFixed(2)} %)`;
+        pvElement.className = `pv-badge ${colorClass}`;
+
+        const now = new Date();
+        document.getElementById('update-time').textContent = 'Mis à jour à ' + now.toLocaleTimeString('fr-FR');
+      } catch (error) {
+        console.error('Erreur API :', error);
+        document.getElementById('update-time').textContent = 'Erreur réseau (nouvel essai bientôt)';
+      }
+    }
+
+    updateTracker();
+    setInterval(updateTracker, 30000);
+  </script>
+</body>
+</html>
